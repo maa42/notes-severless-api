@@ -8,8 +8,7 @@ phases:
     commands:
       - echo Installing services CLI
       - npm i -g serverless
-      - cd notes
-      - echo Installing npm dependecies of notes service
+      - echo Installing npm dependencies of notes service
       - npm install
   build:
     on-failure: ABORT
@@ -24,4 +23,4 @@ artifacts:
   name: MyNopesApiArtifacts
 cache:
   paths:
-    - 'notes/node_modules/**/*'
+    - 'node_modules/**/*'
