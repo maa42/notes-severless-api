@@ -1,0 +1,88 @@
+service: notes
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: ${opt:stage, 'dev'}  #test qa production
+  region: us-east-1
+
+plugins:
+  - serverless-iam-roles-per-function
+
+functions:
+  authorizer:
+    handler: authorizer.handler
+    environment:
+      COGNITO_USERPOOL_ID: !Ref cognitoUserPool
+      COGNITO_WEB_CLIENT_ID: !Ref cognitoUserPoolWebClient
+  createNotes:
+    handler: handler.createNote
+    environment:
+      AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+      NOTES_TABLE_NAME: !Ref notesTable
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamoDB:PutItem
+        Resource: !GetAtt notesTable.Arn
+    events:
+      - http:
+          method: post
+          path: notes
+          authorizer: authorizer
+  updateNote:
+    handler: handler.updateNote
+    environment:
+      NOTES_TABLE_NAME: !Ref notesTable
+      AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamoDB:UpdateItem
+        Resource: !GetAtt notesTable.Arn
+    events:
+      - http:
+          method: put
+          path: notes/{id}
+          authorizer: authorizer
+
+  deleteNote:
+    handler: handler.deleteNote
+    environment:
+      NOTES_TABLE_NAME: !Ref notesTable
+      AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamoDB:DeleteItem
+        Resource: !GetAtt notesTable.Arn
+    events:
+      - http:
+          method: delete
+          path: notes/{id}
+          authorizer: authorizer
+  getAllNotes:
+    handler: handler.getAllNotes
+    environment:
+      NOTES_TABLE_NAME: !Ref notesTable
+      AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamoDB:Scan
+        Resource: !GetAtt notesTable.Arn
+    events:
+      - http:
+          method: get
+          path: notes
+          authorizer:
+            name: userpool_authorizer
+            type: COGNITO_USER_POOLS
+            arn:  !GetAtt cognitoUserPool.Arn #${ssm:/notes/${self:provider.stage}/userPoolArn}
+
+
+resources:
+  Resources:
+    ${file(resources.yml)}
+
